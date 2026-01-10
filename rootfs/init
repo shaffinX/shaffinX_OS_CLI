@@ -1,0 +1,70 @@
+#!/bin/sh
+
+# ShaffinX OS Init Script - Installer Mode
+# This runs when booting from the ISO
+
+echo "Starting ShaffinX OS Installer..."
+
+# Mount essential filesystems
+mount -t proc none /proc
+mount -t sysfs none /sys
+mount -t devtmpfs none /dev
+
+# Create additional device nodes
+mkdir -p /dev/pts
+mount -t devpts none /dev/pts
+mount -t tmpfs none /tmp
+
+# Set hostname
+hostname -F /etc/hostname
+
+# Display welcome message
+clear
+cat /etc/motd
+
+echo ""
+echo "╔═══════════════════════════════════════════════════════════╗"
+echo "║                                                           ║"
+echo "║              Installation Options                         ║"
+echo "║                                                           ║"
+echo "╚═══════════════════════════════════════════════════════════╝"
+echo ""
+echo "  1) Install ShaffinX OS to hard disk"
+echo "  2) Enter live shell (manual mode)"
+echo ""
+echo -n "Select option (1-2) [default: 1]: "
+
+# Read user choice (no timeout, wait for input)
+read CHOICE
+
+# Default to installer if no input
+if [ -z "$CHOICE" ]; then
+    CHOICE=1
+fi
+
+case $CHOICE in
+    1)
+        echo ""
+        echo "Starting installer..."
+        sleep 1
+        /installer/install.sh
+        ;;
+    2)
+        echo ""
+        echo "Entering live shell mode..."
+        echo "Run '/installer/install.sh' anytime to install."
+        ;;
+    *)
+        echo ""
+        echo "Invalid option. Entering live shell mode..."
+        echo "Run '/installer/install.sh' to install."
+        ;;
+esac
+
+echo ""
+
+# Load shell profile
+export ENV=/etc/profile
+
+# Start shell
+exec /bin/sh

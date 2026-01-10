@@ -1,0 +1,16 @@
+# Kernel source (too large for GitHub)
+linux-6.12/
+linux-6.12.tar.xz
+
+# Build artifacts (regenerated)
+build/
+rootfs/lib/modules/
+
+# Downloaded sources
+busybox-*/
+*.tar.*
+*.iso
+
+# Temporary files
+*.log
+*.img

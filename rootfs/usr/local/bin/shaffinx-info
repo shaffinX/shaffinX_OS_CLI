@@ -1,0 +1,24 @@
+#!/bin/sh
+# ShaffinX OS System Information Tool
+# This is an example of a custom command you can create
+
+echo "╔═══════════════════════════════════════════════════════════╗"
+echo "║           ShaffinX OS System Information                  ║"
+echo "╚═══════════════════════════════════════════════════════════╝"
+echo ""
+echo "OS Name:        ShaffinX OS CLI"
+echo "Version:        1.0.0"
+echo "Kernel:         $(uname -r)"
+echo "Architecture:   $(uname -m)"
+echo "Hostname:       $(hostname)"
+echo "Uptime:         $(uptime)"
+echo ""
+echo "Memory Information:"
+free -h
+echo ""
+echo "Disk Usage:"
+df -h
+echo ""
+echo "╔═══════════════════════════════════════════════════════════╗"
+echo "║  Add your custom system tools in /usr/local/bin/         ║"
+echo "╚═══════════════════════════════════════════════════════════╝"

@@ -1,0 +1,13 @@
+╔═══════════════════════════════════════════════════════════╗
+║                                                           ║
+║              Welcome to ShaffinX OS CLI                   ║
+║                   Version 1.0.0                           ║
+║                                                           ║
+║              Custom Linux Distribution                    ║
+║              Built on Linux Kernel 6.12                   ║
+║                                                           ║
+╚═══════════════════════════════════════════════════════════╝
+
+Type 'help' for available commands.
+Type 'shaffinx-info' for system information.
+

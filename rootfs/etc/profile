@@ -1,0 +1,28 @@
+#!/bin/sh
+# ShaffinX OS Shell Profile
+# This file is sourced by the shell on startup
+
+export PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin
+export PS1='\[\033[1;32m\]\u@shaffinx-os\[\033[0m\]:\[\033[1;34m\]\w\[\033[0m\]\$ '
+export HOME=/root
+export TERM=linux
+
+# Custom aliases
+alias ll='ls -lah'
+alias la='ls -A'
+alias l='ls -CF'
+alias ..='cd ..'
+alias ...='cd ../..'
+alias cls='clear'
+
+# Custom functions
+help() {
+    echo "ShaffinX OS - Available Commands:"
+    echo "  Standard Unix commands provided by BusyBox"
+    echo "  Custom commands:"
+    echo "    shaffinx-info  - Display system information"
+    echo "    help           - Show this help message"
+}
+
+# Welcome message
+echo "ShaffinX OS environment loaded successfully"
