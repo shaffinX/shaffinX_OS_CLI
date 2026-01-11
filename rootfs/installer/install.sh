@@ -19,11 +19,18 @@ fi
 # Detect available disks
 echo "Detecting available disks..."
 echo ""
-fdisk -l | grep "Disk /dev/"
+
+# Use lsblk if available, otherwise fdisk
+if command -v lsblk >/dev/null 2>&1; then
+    lsblk -d -n -o NAME,SIZE,TYPE | grep disk | awk '{print "/dev/"$1" ("$2")"}'
+else
+    fdisk -l | grep "Disk /dev/"
+fi
+
 echo ""
 
 # Ask for target disk
-echo -n "Enter target disk (e.g., /dev/sda): "
+echo -n "Enter target disk (e.g., /dev/sda or /dev/vda): "
 read TARGET_DISK
 
 if [ ! -b "$TARGET_DISK" ]; then
@@ -44,6 +51,11 @@ fi
 # Partition the disk
 echo ""
 echo "Partitioning $TARGET_DISK..."
+
+# Clear any existing partition table first
+dd if=/dev/zero of=$TARGET_DISK bs=512 count=1 2>/dev/null
+
+# Create new partition table and partition
 (
 echo o # Create new DOS partition table
 echo n # New partition
@@ -55,9 +67,21 @@ echo a # Make bootable
 echo w # Write changes
 ) | fdisk $TARGET_DISK
 
-# Wait for partition to be ready
-sleep 2
-PARTITION="${TARGET_DISK}1"
+# Wait for partition to be ready and sync
+sync
+sleep 3
+
+# Determine partition name (handles both sda1 and vda1 style naming)
+if [ -b "${TARGET_DISK}1" ]; then
+    PARTITION="${TARGET_DISK}1"
+elif [ -b "${TARGET_DISK}p1" ]; then
+    PARTITION="${TARGET_DISK}p1"
+else
+    echo "ERROR: Cannot find partition ${TARGET_DISK}1 or ${TARGET_DISK}p1"
+    exit 1
+fi
+
+echo "Using partition: $PARTITION"
 
 # Format partition
 echo "Formatting $PARTITION as ext4..."
@@ -183,10 +207,62 @@ chown 1000:1000 /mnt/shaffinx/home/$USERNAME
 # Update profile with new hostname
 sed -i "s/shaffinx-os/$HOSTNAME/g" /mnt/shaffinx/etc/profile
 
-# Create inittab for login
+# Create init script for installed system (not installer mode)
+cat > /mnt/shaffinx/init << 'INITEOF'
+#!/bin/sh
+# ShaffinX OS Init Script - Installed System
+
+echo "Starting ShaffinX OS..."
+
+# Mount essential filesystems
+echo "Mounting filesystems..."
+mount -t proc proc /proc 2>/dev/null
+mount -t sysfs sysfs /sys 2>/dev/null  
+mount -t devtmpfs devtmpfs /dev 2>/dev/null
+
+# Create additional device nodes
+mkdir -p /dev/pts /dev/shm
+mount -t devpts devpts /dev/pts 2>/dev/null
+mount -t tmpfs tmpfs /tmp 2>/dev/null
+mount -t tmpfs tmpfs /dev/shm 2>/dev/null
+
+# Set hostname
+if [ -f /etc/hostname ]; then
+    hostname -F /etc/hostname
+fi
+
+# Remount root as read-write
+echo "Remounting root filesystem..."
+mount -o remount,rw / 2>/dev/null
+
+# Set up console
+exec </dev/console >/dev/console 2>&1
+
+# Make sure /dev/console exists and is accessible
+if [ ! -c /dev/console ]; then
+    mknod /dev/console c 5 1
+fi
+
+# Display welcome message
+clear
+if [ -f /etc/motd ]; then
+    cat /etc/motd
+else
+    echo "Welcome to ShaffinX OS"
+fi
+
+# Start getty for login
+echo ""
+echo "Starting login service..."
+exec /sbin/getty 38400 tty1
+INITEOF
+
+chmod +x /mnt/shaffinx/init
+
+# Also create inittab as backup (BusyBox init can use either)
 cat > /mnt/shaffinx/etc/inittab << 'EOF'
 ::sysinit:/etc/init.d/rcS
-::respawn:/sbin/getty 38400 tty1
+tty1::respawn:/sbin/getty 38400 tty1
 ::ctrlaltdel:/sbin/reboot
 ::shutdown:/bin/umount -a -r
 EOF
@@ -195,33 +271,80 @@ EOF
 mkdir -p /mnt/shaffinx/etc/init.d
 cat > /mnt/shaffinx/etc/init.d/rcS << 'EOF'
 #!/bin/sh
-mount -t proc none /proc
-mount -t sysfs none /sys
-mount -t devtmpfs none /dev
-mkdir -p /dev/pts
-mount -t devpts none /dev/pts
-mount -t tmpfs none /tmp
-hostname -F /etc/hostname
+# System initialization script
+
+# Mount filesystems
+mount -t proc none /proc 2>/dev/null
+mount -t sysfs none /sys 2>/dev/null
+mount -t devtmpfs none /dev 2>/dev/null
+
+# Create device directories
+mkdir -p /dev/pts /dev/shm
+
+# Mount special filesystems
+mount -t devpts none /dev/pts 2>/dev/null
+mount -t tmpfs none /tmp 2>/dev/null
+mount -t tmpfs none /dev/shm 2>/dev/null
+
+# Set hostname
+hostname -F /etc/hostname 2>/dev/null
+
+# Remount root filesystem as read-write
+mount -o remount,rw / 2>/dev/null
+
+# Run any additional startup scripts
+for script in /etc/init.d/S??*; do
+    [ -x "$script" ] && "$script" start
+done
 EOF
+
 chmod +x /mnt/shaffinx/etc/init.d/rcS
 
 # Install GRUB bootloader
 echo ""
 echo "Installing GRUB bootloader..."
-grub-install --boot-directory=/mnt/shaffinx/boot $TARGET_DISK
+
+# Check if grub-install is available
+if ! command -v grub-install >/dev/null 2>&1; then
+    echo "ERROR: grub-install not found!"
+    echo "GRUB installation failed. The system will not be bootable."
+    echo ""
+    echo "You need to install GRUB manually or use a different bootloader."
+    read -p "Press Enter to continue to shell..."
+    exec /bin/sh
+fi
+
+# Install GRUB
+if grub-install --boot-directory=/mnt/shaffinx/boot $TARGET_DISK 2>&1; then
+    echo "✓ GRUB installed successfully"
+else
+    echo "ERROR: GRUB installation failed!"
+    echo "The system may not be bootable."
+    echo ""
+    read -p "Press Enter to continue anyway or Ctrl+C to abort..."
+fi
 
 # Create GRUB config for installed system
+echo "Creating GRUB configuration..."
 mkdir -p /mnt/shaffinx/boot/grub
 cat > /mnt/shaffinx/boot/grub/grub.cfg << EOF
 set timeout=5
 set default=0
 
 menuentry "ShaffinX OS CLI" {
-    linux /boot/bzImage root=$PARTITION rw quiet
+    linux /boot/bzImage root=$PARTITION rw init=/init console=tty1 acpi=force reboot=acpi
+}
+
+menuentry "ShaffinX OS CLI (Verbose Mode)" {
+    linux /boot/bzImage root=$PARTITION rw init=/init console=tty1 acpi=force reboot=acpi loglevel=7
 }
 
 menuentry "ShaffinX OS CLI (Recovery Mode)" {
-    linux /boot/bzImage root=$PARTITION rw single
+    linux /boot/bzImage root=$PARTITION rw init=/bin/sh console=tty1 acpi=force reboot=acpi
+}
+
+menuentry "ShaffinX OS CLI (Safe Graphics)" {
+    linux /boot/bzImage root=$PARTITION rw init=/init nomodeset vga=normal console=tty1 acpi=force reboot=acpi
 }
 EOF
 
@@ -238,7 +361,9 @@ EOF
 echo ""
 echo "Finalizing installation..."
 sync
+sleep 1
 umount /mnt/shaffinx
+sync
 
 echo ""
 echo "╔═══════════════════════════════════════════════════════════╗"
@@ -254,9 +379,17 @@ echo "  Root:     enabled"
 echo ""
 echo "Please remove the installation media and reboot."
 echo ""
-echo -n "Reboot now? (yes/no): "
+echo -n "Reboot now? (yes/no) [default: yes]: "
 read REBOOT
 
+if [ -z "$REBOOT" ]; then
+    REBOOT="yes"
+fi
+
 if [ "$REBOOT" = "yes" ]; then
-    reboot
+    echo ""
+    echo "Rebooting system..."
+    sync
+    # Try normal reboot first, then force if needed
+    reboot -f || reboot || echo b > /proc/sysrq-trigger
 fi
