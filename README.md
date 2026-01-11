@@ -2,6 +2,12 @@
 
 A fully functional CLI-based operating system built from scratch using the Linux kernel 6.12 and BusyBox userspace utilities.
 
+## 📥 Download
+
+[![Download ShaffinX OS v1.0](https://img.shields.io/badge/Download-ShaffinX%20OS%20v1.0-blue?style=for-the-badge&logo=linux)](https://github.com/shaffinX/shaffinX_OS_CLI/releases/download/v1.0_alpha/ShaffinX_OS_v1.0.iso)
+
+**Direct Download**: [ShaffinX_OS_v1.0.iso](https://github.com/shaffinX/shaffinX_OS_CLI/releases/download/v1.0_alpha/ShaffinX_OS_v1.0.iso) (27 MB)
+
 ## 🎉 Latest Updates (January 11, 2026 - 4:04 PM)
 
 **JOB CONTROL ERROR FIXED!**
@@ -47,18 +53,6 @@ This automated script will:
    - Standard VGA text console
    - Working reboot/poweroff commands
    - Full BusyBox command suite
-
-## 📚 Documentation
-
-| File | Description |
-|------|-------------|
-| **JOB_CONTROL_FIX.md** | ⚠️ **READ THIS** - Job control error and reboot fix |
-| **BLACK_SCREEN_FIX.md** | ⚠️ **READ THIS** - Black screen issue fix |
-| **SUMMARY.md** | Complete overview of all fixes applied |
-| **FIXES_APPLIED.md** | Detailed technical documentation of fixes |
-| **QUICKSTART.md** | Step-by-step installation guide |
-| **implementation_plan.md** | Original build plan and architecture |
-| **task.md** | Development tasks and progress |
 
 ## 🛠️ Features
 
